@@ -26,6 +26,7 @@ struct MapView: View {
     @State private var showingProfileMenu = false
     @State private var showingAlertFilterMenu = false
     @State private var filteredType: AlertType?
+    @State private var isBottomMenuExpanded = false
     
     // Alert Filter Settings
     @AppStorage("alertNotificationRadius") private var notificationRadius: Double = 50.0 // km
@@ -85,9 +86,21 @@ struct MapView: View {
                 .onChange(of: locationManager.authorizationStatus) {
                     handleLocationPermissionChange()
                 }
-                .ignoresSafeArea(.all, edges: .top)
+                .ignoresSafeArea(.all, edges: [.top, .bottom])
                 .sheet(item: $selectedAlert) { alert in
                     AlertDetailView(alert: alert)
+                }
+                
+                // Background overlay when menu is expanded - moved to main ZStack
+                if isBottomMenuExpanded {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea(.all)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                isBottomMenuExpanded = false
+                            }
+                        }
+                        .zIndex(998)
                 }
                 
                 VStack(spacing: 0) {
@@ -101,6 +114,7 @@ struct MapView: View {
                     // Bottom Navigation
                     bottomNavigationBar
                 }
+                .zIndex(999)
                 
                 // Custom Bottom Sheet for Settings
                 if showingSettingsSheet {
@@ -241,145 +255,403 @@ struct MapView: View {
     }
     
     private var bottomNavigationBar: some View {
-        HStack(spacing: 32) {
+        ZStack {
+            // Floating action button container
+            VStack {
             Spacer()
             
-            // People Icon
-            Button(action: { showingCommunityView = true }) {
-                Image(systemName: "person.2.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .frame(width: 48, height: 48)
-                    .background(
+                ZStack {
+                    // Report Button - appears on top when expanded
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            isBottomMenuExpanded = false
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            showingReportSheet = true
+                        }
+                    }) {
+                        ZStack {
+                            // Outer glow effect
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            Color.red.opacity(0.4),
+                                            Color.orange.opacity(0.2),
+                                            Color.clear
+                                        ],
+                                        center: .center,
+                                        startRadius: 20,
+                                        endRadius: 35
+                                    )
+                                )
+                                .frame(width: 70, height: 70)
+                                .blur(radius: 8)
+                            
+                            // Main button with premium gradient
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.25), Color.white.opacity(0.15)],
+                                        colors: [
+                                            Color(red: 1.0, green: 0.3, blue: 0.4),
+                                            Color(red: 1.0, green: 0.5, blue: 0.2),
+                                            Color(red: 1.0, green: 0.4, blue: 0.3)
+                                        ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
+                                .frame(width: 60, height: 60)
                             .overlay(
+                                    // Inner highlight
                                 Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.3),
+                                                    Color.clear
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .center
+                                            )
+                                        )
+                                )
+                                .overlay(
+                                    // Border with gradient
+                                    Circle()
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.5),
+                                                    Color.white.opacity(0.2)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 2
+                                        )
+                                )
+                                .shadow(color: Color.red.opacity(0.5), radius: 15, x: 0, y: 8)
+                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                            
+                            // Icon
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        }
+                    }
+                    .offset(x: 0, y: isBottomMenuExpanded ? -100 : 0)
+                    .scaleEffect(isBottomMenuExpanded ? 1.0 : 0.3)
+                    .opacity(isBottomMenuExpanded ? 1.0 : 0.0)
+                    .animation(
+                        .spring(response: 0.5, dampingFraction: 0.7)
+                        .delay(isBottomMenuExpanded ? 0.05 : 0),
+                        value: isBottomMenuExpanded
                     )
-            }
-            
-            // Center Red Location Button with gradient and glow
-            Button(action: { showingReportSheet = true }) {
+                    
+                    // Community Button - appears on the left when expanded
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            isBottomMenuExpanded = false
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            showingCommunityView = true
+                        }
+                    }) {
                 ZStack {
-                    // Outer glow
+                            // Outer glow effect
                     Circle()
                         .fill(
-                            LinearGradient(
-                                colors: [.red.opacity(0.3), .orange.opacity(0.3)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 80, height: 80)
+                                    RadialGradient(
+                                        colors: [
+                                            Color.blue.opacity(0.4),
+                                            Color.purple.opacity(0.2),
+                                            Color.clear
+                                        ],
+                                        center: .center,
+                                        startRadius: 20,
+                                        endRadius: 35
+                                    )
+                                )
+                                .frame(width: 70, height: 70)
                         .blur(radius: 8)
                     
-                    // Main button
+                            // Main button with premium gradient
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [.red, .orange],
+                                        colors: [
+                                            Color(red: 0.2, green: 0.5, blue: 1.0),
+                                            Color(red: 0.5, green: 0.3, blue: 0.9),
+                                            Color(red: 0.4, green: 0.4, blue: 1.0)
+                                        ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 68, height: 68)
-                        .shadow(color: .red.opacity(0.4), radius: 16, x: 0, y: 8)
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    // Inner highlight
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.3),
+                                                    Color.clear
+                                                ],
+                                    startPoint: .topLeading,
+                                                endPoint: .center
+                                            )
+                                )
+                            )
+                            .overlay(
+                                    // Border with gradient
+                                Circle()
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.5),
+                                                    Color.white.opacity(0.2)
+                                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 2
+                            )
+                        )
+                                .shadow(color: Color.blue.opacity(0.5), radius: 15, x: 0, y: 8)
+                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                     
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 32))
+                            // Icon
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 26, weight: .semibold))
                         .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                }
-            }
-            .offset(y: -12)
-            
-            // Chat Icon (replaced Settings)
-            Button(action: { showingChatView = true }) {
-                Image(systemName: "message.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .frame(width: 48, height: 48)
-                    .background(
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        }
+                    }
+                    .offset(x: isBottomMenuExpanded ? -90 : 0, y: isBottomMenuExpanded ? -80 : 0)
+                    .scaleEffect(isBottomMenuExpanded ? 1.0 : 0.3)
+                    .opacity(isBottomMenuExpanded ? 1.0 : 0.0)
+                    .animation(
+                        .spring(response: 0.5, dampingFraction: 0.7)
+                        .delay(isBottomMenuExpanded ? 0.1 : 0),
+                        value: isBottomMenuExpanded
+                    )
+                    
+                    // Chat Button - appears on the right when expanded
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            isBottomMenuExpanded = false
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            showingChatView = true
+                        }
+                    }) {
+            ZStack {
+                            // Outer glow effect
+                            Circle()
+                    .fill(
+                                    RadialGradient(
+                            colors: [
+                                            Color.green.opacity(0.4),
+                                            Color.teal.opacity(0.2),
+                                            Color.clear
+                                        ],
+                                        center: .center,
+                                        startRadius: 20,
+                                        endRadius: 35
+                                    )
+                                )
+                                .frame(width: 70, height: 70)
+                                .blur(radius: 8)
+                            
+                            // Main button with premium gradient
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.25), Color.white.opacity(0.15)],
+                            colors: [
+                                            Color(red: 0.2, green: 0.8, blue: 0.5),
+                                            Color(red: 0.1, green: 0.7, blue: 0.7),
+                                            Color(red: 0.2, green: 0.8, blue: 0.6)
+                            ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
+                                .frame(width: 60, height: 60)
                             .overlay(
+                                    // Inner highlight
                                 Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 20)
-        .background(
-            ZStack {
-                // Base glass effect with dark tint
-                RoundedRectangle(cornerRadius: 32)
-                    .fill(
+                                        .fill(
                         LinearGradient(
                             colors: [
-                                Color.black.opacity(0.8),
-                                Color.black.opacity(0.7)
+                                Color.white.opacity(0.3),
+                                                    Color.clear
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .center
+                                            )
+                                        )
+                                )
+                                .overlay(
+                                    // Border with gradient
+                                    Circle()
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.5),
+                                                    Color.white.opacity(0.2)
                             ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                                            lineWidth: 2
+                                        )
+                                )
+                                .shadow(color: Color.green.opacity(0.5), radius: 15, x: 0, y: 8)
+                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                            
+                            // Icon
+                            Image(systemName: "message.fill")
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                        }
+                    }
+                    .offset(x: isBottomMenuExpanded ? 90 : 0, y: isBottomMenuExpanded ? -80 : 0)
+                    .scaleEffect(isBottomMenuExpanded ? 1.0 : 0.3)
+                    .opacity(isBottomMenuExpanded ? 1.0 : 0.0)
+                    .animation(
+                        .spring(response: 0.5, dampingFraction: 0.7)
+                        .delay(isBottomMenuExpanded ? 0.15 : 0),
+                        value: isBottomMenuExpanded
                     )
-                
-                // Frosted glass effect
-                RoundedRectangle(cornerRadius: 32)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                
-                // Animated gradient overlay for liquid glass effect
-                RoundedRectangle(cornerRadius: 32)
+                    
+                    // Center Main Button - toggles menu
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            isBottomMenuExpanded.toggle()
+                        }
+                    }) {
+            ZStack {
+                            // Outer glow with radial effect
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: isBottomMenuExpanded ? [
+                                            Color.gray.opacity(0.5),
+                                            Color.gray.opacity(0.3),
+                                            Color.clear
+                                        ] : [
+                                            Color.red.opacity(0.5),
+                                            Color.orange.opacity(0.3),
+                                            Color.clear
+                                        ],
+                                        center: .center,
+                                        startRadius: 25,
+                                        endRadius: 45
+                                    )
+                                )
+                                .frame(width: 90, height: 90)
+                                .blur(radius: 12)
+                            
+                            // Secondary glow layer
+                            Circle()
                     .fill(
                         LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.1),
-                                Color.white.opacity(0.05),
-                                Color.clear,
-                                Color.white.opacity(0.05)
+                            colors: isBottomMenuExpanded ? [
+                                            Color.gray.opacity(0.2),
+                                            Color.gray.opacity(0.15)
+                                        ] : [
+                                            Color.red.opacity(0.2),
+                                            Color.orange.opacity(0.15)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 85, height: 85)
+                                .blur(radius: 6)
+                            
+                            // Main button with premium 3-color gradient
+                            Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: isBottomMenuExpanded ? [
+                                            Color(.systemGray4),
+                                            Color(.systemGray5),
+                                            Color(.systemGray3)
+                            ] : [
+                                            Color(red: 1.0, green: 0.25, blue: 0.35),
+                                            Color(red: 1.0, green: 0.45, blue: 0.15),
+                                            Color(red: 1.0, green: 0.35, blue: 0.25)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-            }
+                                .frame(width: 72, height: 72)
             .overlay(
-                RoundedRectangle(cornerRadius: 32)
+                                    // Inner highlight for depth
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.4),
+                                                    Color.white.opacity(0.1),
+                                                    Color.clear
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .center
+                                            )
+                                        )
+                                )
+                                .overlay(
+                                    // Premium border with gradient
+                                    Circle()
                     .stroke(
                         LinearGradient(
                             colors: [
+                                                    Color.white.opacity(0.6),
                                 Color.white.opacity(0.3),
                                 Color.white.opacity(0.1)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1.5
-                    )
-            )
-            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-        )
-        .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+                                            lineWidth: 2.5
+                                        )
+                                )
+                                .shadow(color: isBottomMenuExpanded ? Color.gray.opacity(0.6) : Color.red.opacity(0.6), radius: 20, x: 0, y: 10)
+                                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                            
+                            // Icon - changes between phi and plus (rotated to X) when expanded
+                            Group {
+                                if isBottomMenuExpanded {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 34, weight: .bold))
+                                        .transition(.scale.combined(with: .opacity))
+                                } else {
+                                    Text("φ")
+                                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                                        .frame(width: 40, height: 40, alignment: .center)
+                                        .offset(y: -4)
+                                        .transition(.scale.combined(with: .opacity))
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
+                            .id(isBottomMenuExpanded ? "plus" : "phi")
+                        }
+                    }
+                    .rotationEffect(.degrees(isBottomMenuExpanded ? 45 : 0))
+                    .scaleEffect(isBottomMenuExpanded ? 0.95 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isBottomMenuExpanded)
+                }
+                .padding(.bottom, 30)
+            }
+        }
     }
     
     private func updateRegionToUserLocation() {
@@ -946,28 +1218,18 @@ struct AlertFilterMenuView: View {
 
             // MARK: Header - Compact Design
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color.blue.opacity(0.8),
-                        Color.purple.opacity(0.7)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .overlay(.ultraThinMaterial.opacity(0.3))
-                .mask(
-                    RoundedRectangle(cornerRadius: corner, style: .continuous)
-                )
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(Color(.systemBackground))
 
                 HStack(spacing: 12) {
                     HStack(spacing: 10) {
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         
                         Text("Alert Filters")
                             .font(.headline.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
 
                     Spacer()
@@ -981,9 +1243,9 @@ struct AlertFilterMenuView: View {
                         } label: {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .frame(width: 28, height: 28)
-                                .background(Color.white.opacity(0.2))
+                                .background(Color(.systemGray5))
                                 .clipShape(Circle())
                         }
 
@@ -993,9 +1255,9 @@ struct AlertFilterMenuView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .frame(width: 28, height: 28)
-                                .background(Color.white.opacity(0.2))
+                                .background(Color(.systemGray5))
                                 .clipShape(Circle())
                         }
                     }

@@ -65,6 +65,7 @@ struct MapView: View {
         }
     }
     
+    // TODO: Sign in 한 다음에 뒤로가기가 생기는데...? 이게 시뮬레이션이라 잇는건지 우리가 없애야되는건지 모르갰음
     var body: some View {
         NavigationView {
             ZStack {

@@ -18,6 +18,7 @@ struct APIConfig {
         #if targetEnvironment(simulator)
         // iOS 시뮬레이터용
         return "http://localhost:8080"
+//        return "http://43.154.113.11:8080"
         #else
         // 실제 iOS 기기용
         return "http://10.68.209.21:8080"
